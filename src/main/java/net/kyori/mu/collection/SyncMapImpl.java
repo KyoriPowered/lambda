@@ -26,10 +26,12 @@ package net.kyori.mu.collection;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -43,6 +45,9 @@ import java.util.function.Function;
     private Function<Integer, Map<K, SyncMap.ExpungingValue<V>>> function;
     private Map<K, SyncMap.ExpungingValue<V>> dirty;
     private int readMisses;
+    private KeySet keySet;
+    private ValueCollection valueCollection;
+    private EntrySet entrySet;
 
     /* package */ SyncMapImpl(final Function<Integer, Map<K, SyncMap.ExpungingValue<V>>> function, final int initialCapacity) {
         this.function = function;
@@ -168,6 +173,21 @@ import java.util.function.Function;
     }
 
     @Override
+    public boolean remove(final Object key, final Object value) {
+        ExpungingValue<V> entry = this.read.get(key);
+        boolean absent = entry == null;
+        if(absent && this.readAmended) {
+            synchronized(this.lock) {
+                if(this.readAmended && (absent = (entry = this.read.get(key)) == null) && this.dirty != null) {
+                    return this.dirty.remove(key, value);
+                }
+            }
+        }
+        if(!absent) return this.tryDelete(entry, value);
+        return false;
+    }
+
+    @Override
     public void putAll(final Map<? extends K, ? extends V> other) {
         for (final Map.Entry<? extends K, ? extends V> otherEntry : other.entrySet()) {
             ExpungingValue<V> entry = this.read.get(otherEntry.getKey());
@@ -207,18 +227,24 @@ import java.util.function.Function;
     }
 
     @Override
+    @NonNull
     public Set<K> keySet() {
-        return new KeySet();
+        if(this.keySet != null) return this.keySet;
+        return this.keySet = new KeySet();
     }
 
     @Override
+    @NonNull
     public Collection<V> values() {
-        return new ValueSet();
+        if(this.valueCollection != null) return this.valueCollection;
+        return this.valueCollection = new ValueCollection();
     }
 
     @Override
+    @NonNull
     public Set<Entry<K, V>> entrySet() {
-        return new EntrySet();
+        if(this.entrySet != null) return this.entrySet;
+        return this.entrySet = new EntrySet();
     }
 
     private V getCached(final ExpungingValue<V> entry) {
@@ -229,6 +255,13 @@ import java.util.function.Function;
     private void tryDelete(final ExpungingValue<V> entry) {
         if(entry.isExpunged() || entry.getValue() == null) return;
         entry.setValue(null);
+    }
+
+    private boolean tryDelete(final ExpungingValue<V> entry, final Object compare) {
+        if(entry.isExpunged() || entry.getValue() == null) return false;
+        if(!Objects.equals(entry.getValue(), compare)) return false;
+        entry.setValue(null);
+        return true;
     }
 
     private boolean tryPut(final ExpungingValue<V> entry, final V value) {
@@ -335,11 +368,6 @@ import java.util.function.Function;
         }
 
         @Override
-        public void clear() {
-            SyncMapImpl.this.clear();
-        }
-
-        @Override
         public boolean contains(final Object key) {
             return SyncMapImpl.this.containsKey(key);
         }
@@ -347,6 +375,16 @@ import java.util.function.Function;
         @Override
         public boolean remove(final Object key) {
             return SyncMapImpl.this.remove(key) != null;
+        }
+
+        @Override
+        public boolean addAll(final @NonNull Collection<? extends K> collection) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void clear() {
+            SyncMapImpl.this.clear();
         }
 
         @NonNull
@@ -384,62 +422,15 @@ import java.util.function.Function;
         }
     }
 
-    private class ValueSet implements Collection<V> {
+    private class ValueCollection extends AbstractCollection<V> {
         @Override
         public int size() {
             return SyncMapImpl.this.size();
         }
 
         @Override
-        public boolean isEmpty() {
-            return SyncMapImpl.this.isEmpty();
-        }
-
-        @Override
         public boolean contains(final Object value) {
             return SyncMapImpl.this.containsValue(value);
-        }
-
-        @NonNull
-        @Override
-        public Iterator<V> iterator() {
-            this.promote();
-            return new ValueIterator(SyncMapImpl.this.read.values().iterator());
-        }
-
-        @NonNull
-        @Override
-        public Object[] toArray() {
-            this.promote();
-            return SyncMapImpl.this.read.values().toArray();
-        }
-
-        @NonNull
-        @Override
-        public <T> T[] toArray(final @NonNull T[] array) {
-            this.promote();
-            return SyncMapImpl.this.read.values().toArray(array);
-        }
-
-        @Override
-        public boolean add(final V value) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean remove(final Object value) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean containsAll(final @NonNull Collection<?> collection) {
-            this.promote();
-            if(collection != this) {
-                for(final Object other : collection) {
-                    if(other == null || !this.contains(other)) return false;
-                }
-            }
-            return true;
         }
 
         @Override
@@ -448,18 +439,15 @@ import java.util.function.Function;
         }
 
         @Override
-        public boolean removeAll(final @NonNull Collection<?> collection) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean retainAll(final @NonNull Collection<?> collection) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public void clear() {
             SyncMapImpl.this.clear();
+        }
+
+        @NonNull
+        @Override
+        public Iterator<V> iterator() {
+            this.promote();
+            return new ValueIterator(SyncMapImpl.this.read.entrySet().iterator());
         }
 
         private void promote() {
@@ -480,11 +468,6 @@ import java.util.function.Function;
         }
 
         @Override
-        public void clear() {
-            SyncMapImpl.this.clear();
-        }
-
-        @Override
         public boolean contains(final Object key) {
             return SyncMapImpl.this.containsKey(key);
         }
@@ -492,6 +475,16 @@ import java.util.function.Function;
         @Override
         public boolean remove(final Object key) {
             return SyncMapImpl.this.remove(key) != null;
+        }
+
+        @Override
+        public boolean addAll(final @NonNull Collection<? extends Map.Entry<K, V>> collection) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void clear() {
+            SyncMapImpl.this.clear();
         }
 
         @NonNull
@@ -541,6 +534,7 @@ import java.util.function.Function;
 
     private class KeyIterator implements Iterator<K> {
         private final Iterator<K> backingIterator;
+        private K previous;
 
         private KeyIterator(final Iterator<K> backingIterator) {
             this.backingIterator = backingIterator;
@@ -553,12 +547,13 @@ import java.util.function.Function;
 
         @Override
         public K next() {
-            return this.backingIterator.next();
+            return this.previous = this.backingIterator.next();
         }
 
         @Override
         public void remove() {
-            throw new UnsupportedOperationException();
+            if(this.previous == null) return;
+            SyncMapImpl.this.remove(this.previous);
         }
 
         @Override
@@ -568,9 +563,10 @@ import java.util.function.Function;
     }
 
     private class ValueIterator implements Iterator<V> {
-        private final Iterator<ExpungingValue<V>> backingIterator;
+        private final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator;
+        private Map.Entry<K, ExpungingValue<V>> previous;
 
-        private ValueIterator(final Iterator<ExpungingValue<V>> backingIterator) {
+        private ValueIterator(final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator) {
             this.backingIterator = backingIterator;
         }
 
@@ -581,22 +577,25 @@ import java.util.function.Function;
 
         @Override
         public V next() {
-            return this.backingIterator.next().getValue();
+            this.previous = this.backingIterator.next();
+            return this.previous.getValue().getValue();
         }
 
         @Override
         public void remove() {
-            throw new UnsupportedOperationException();
+            if(this.previous == null) return;
+            SyncMapImpl.this.remove(this.previous.getKey(), this.previous.getValue());
         }
 
         @Override
         public void forEachRemaining(final Consumer<? super V> action) {
-            this.backingIterator.forEachRemaining(entry -> action.accept(entry.getValue()));
+            this.backingIterator.forEachRemaining(entry -> action.accept(entry.getValue().getValue()));
         }
     }
 
     private class EntryIterator implements Iterator<Map.Entry<K, V>> {
         private final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator;
+        private Map.Entry<K, ExpungingValue<V>> previous;
 
         private EntryIterator(final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator) {
             this.backingIterator = backingIterator;
@@ -609,12 +608,14 @@ import java.util.function.Function;
 
         @Override
         public Map.Entry<K, V> next() {
-            return new MapEntry(this.backingIterator.next());
+            this.previous = this.backingIterator.next();
+            return new MapEntry(this.previous);
         }
 
         @Override
         public void remove() {
-            throw new UnsupportedOperationException();
+            if(this.previous == null) return;
+            SyncMapImpl.this.remove(this.previous.getKey(), this.previous.getValue());
         }
 
         @Override
