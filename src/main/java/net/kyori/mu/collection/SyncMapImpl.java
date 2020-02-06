@@ -31,6 +31,7 @@ import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterator;
@@ -56,58 +57,60 @@ import java.util.function.Function;
 
     @Override
     public int size() {
-        int size = this.read.size();
+        int size = 0;
         if(this.readAmended) {
             synchronized(this.lock) {
                 if(this.readAmended && this.dirty != null) {
-                    size = this.dirty.size();
-                    this.missLocked();
+                    this.promoteLocked();
                 }
             }
+        }
+        for(final Map.Entry<? extends K, ? extends ExpungingValue<V>> otherEntry : this.read.entrySet()) {
+            final ExpungingValue<V> next = otherEntry.getValue();
+            if (next.isExpunged() || next.getValue() == null) continue;
+            size++;
         }
         return size;
     }
 
     @Override
     public boolean isEmpty() {
-        boolean empty = this.read.isEmpty();
-        if(this.readAmended) {
-            synchronized(this.lock) {
-                if(this.readAmended && this.dirty != null) {
-                    empty = this.dirty.isEmpty();
-                    this.missLocked();
-                }
-            }
-        }
-        return empty;
+        return this.size() == 0;
     }
 
     @Override
     public boolean containsKey(final Object key) {
-        boolean contains = this.read.containsKey(key);
-        if(!contains && this.readAmended) {
+        ExpungingValue<V> entry = this.read.get(key);
+        boolean absent = entry == null;
+        if(absent && this.readAmended) {
             synchronized(this.lock) {
-                if(this.readAmended && this.dirty != null) {
-                    contains = this.dirty.containsKey(key);
+                if(this.readAmended && (absent = (entry = this.read.get(key)) == null) && this.dirty != null) {
+                    absent = ((entry = this.dirty.get(key)) == null);
                     this.missLocked();
                 }
             }
         }
-        return contains;
+        if(absent) return false;
+        return !entry.isExpunged() && entry.getValue() != null;
     }
 
     @Override
     public boolean containsValue(final Object value) {
-        boolean contains = this.read.containsValue(value);
-        if(!contains && this.readAmended) {
+        if(this.readAmended) {
             synchronized(this.lock) {
                 if(this.readAmended && this.dirty != null) {
-                    contains = this.dirty.containsValue(value);
-                    this.missLocked();
+                    this.promoteLocked();
                 }
             }
         }
-        return contains;
+        for(final Map.Entry<? extends K, ? extends ExpungingValue<V>> entry : this.read.entrySet()) {
+            final ExpungingValue<V> next = entry.getValue();
+            if(next.isExpunged() || next.getValue() == null) continue;
+            if(Objects.equals(next.getValue(), value)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -129,17 +132,21 @@ import java.util.function.Function;
     @Override
     public V put(final K key, final V value) {
         ExpungingValue<V> entry = this.read.get(key);
-        ExpungingValue<V> previous = entry;
+        V previous = entry != null ? entry.getValue() : null;
         if(entry == null || !this.tryPut(entry, value)) {
             synchronized(this.lock) {
                 if((entry = this.read.get(key)) != null) {
                     if(this.unexpungedLocked(entry) && this.dirty != null) {
-                        previous = this.dirty.put(key, entry);
+                        final ExpungingValue<V> old = this.dirty.put(key, entry);
+                        if(old != null) previous = old.getValue();
+                    } else {
+                        previous = entry.getValue();
                     }
                     entry.setValue(value);
                 } else {
                     entry = this.dirty != null ? this.dirty.get(key) : null;
                     if(entry != null) {
+                        previous = entry.getValue();
                         entry.setValue(value);
                     } else {
                         if(!this.readAmended) {
@@ -147,29 +154,31 @@ import java.util.function.Function;
                             this.readAmended = true;
                         }
                         if(this.dirty != null) {
-                            previous = this.dirty.put(key, new ExpungingValueImpl<>(value, false));
+                            final ExpungingValue<V> old = this.dirty.put(key, new ExpungingValueImpl<>(value, false));
+                            if(old != null) previous = old.getValue();
                         }
                     }
                 }
             }
         }
-        return previous != null ? previous.getValue() : null;
+        return previous;
     }
 
     @Override
     public V remove(final Object key) {
         ExpungingValue<V> entry = this.read.get(key);
-        ExpungingValue<V> previous = entry;
+        V previous = entry != null ? entry.getValue() : null;
         boolean absent = entry == null;
         if(absent && this.readAmended) {
             synchronized(this.lock) {
                 if(this.readAmended && (absent = (entry = this.read.get(key)) == null) && this.dirty != null) {
-                    previous = this.dirty.remove(key);
+                    final ExpungingValue<V> old = this.dirty.remove(key);
+                    if(old != null) previous = old.getValue();
                 }
             }
         }
         if(!absent) this.tryDelete(entry);
-        return previous != null ? previous.getValue() : null;
+        return previous;
     }
 
     @Override
@@ -179,7 +188,11 @@ import java.util.function.Function;
         if(absent && this.readAmended) {
             synchronized(this.lock) {
                 if(this.readAmended && (absent = (entry = this.read.get(key)) == null) && this.dirty != null) {
-                    return this.dirty.remove(key, value);
+                    absent = (entry = this.dirty.get(key)) == null;
+                    if(!absent && !entry.isExpunged() && entry.getValue() != null && Objects.equals(entry.getValue(), value)) {
+                        this.dirty.remove(key);
+                        return true;
+                    }
                 }
             }
         }
@@ -189,7 +202,7 @@ import java.util.function.Function;
 
     @Override
     public void putAll(final Map<? extends K, ? extends V> other) {
-        for (final Map.Entry<? extends K, ? extends V> otherEntry : other.entrySet()) {
+        for(final Map.Entry<? extends K, ? extends V> otherEntry : other.entrySet()) {
             ExpungingValue<V> entry = this.read.get(otherEntry.getKey());
             if(entry != null && this.tryPut(entry, otherEntry.getValue())) continue;
             synchronized(this.lock) {
@@ -245,6 +258,24 @@ import java.util.function.Function;
     public Set<Entry<K, V>> entrySet() {
         if(this.entrySet != null) return this.entrySet;
         return this.entrySet = new EntrySet();
+    }
+
+    private boolean removeValue(final Object value) {
+        if(this.readAmended) {
+            synchronized(this.lock) {
+                if(this.readAmended && this.dirty != null) {
+                    this.promoteLocked();
+                }
+            }
+        }
+        for(final Map.Entry<? extends K, ? extends ExpungingValue<V>> otherEntry : this.read.entrySet()) {
+            final ExpungingValue<V> next = otherEntry.getValue();
+            if(next.isExpunged() || next.getValue() == null) continue;
+            if(Objects.equals(next.getValue(), value)) {
+                return this.remove(otherEntry.getKey(), value);
+            }
+        }
+        return false;
     }
 
     private V getCached(final ExpungingValue<V> entry) {
@@ -356,8 +387,27 @@ import java.util.function.Function;
         }
 
         @Override
-        public V setValue(V value) {
+        public V setValue(final V value) {
             return SyncMapImpl.this.put(this.key, value);
+        }
+
+        @Override
+        public String toString() {
+            return "SyncMapImpl.MapEntry{key=" + this.getKey() + ", value=" + this.getValue() + "}";
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+           if(this == other) return true;
+           if(!(other instanceof Map.Entry)) return false;
+           final Map.Entry<?, ?> that = (Map.Entry<?, ?>) other;
+           return Objects.equals(this.getKey(), that.getKey())
+                   && Objects.equals(this.getValue(), that.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(this.getKey(), this.getValue());
         }
     }
 
@@ -391,18 +441,27 @@ import java.util.function.Function;
         @Override
         public Iterator<K> iterator() {
             this.promote();
-            return new KeyIterator(SyncMapImpl.this.read.keySet().iterator());
+            return new KeyIterator(SyncMapImpl.this.read.entrySet().iterator());
         }
 
         @Override
         public Spliterator<K> spliterator() {
-            this.promote();
-            return SyncMapImpl.this.read.keySet().spliterator();
+            return new Spliterators.AbstractSpliterator<K>(this.size(), Spliterator.IMMUTABLE) {
+                final Iterator<K> iterator = KeySet.this.iterator();
+
+                public boolean tryAdvance(final Consumer<? super K> action) {
+                    if (this.iterator.hasNext()) {
+                        action.accept(this.iterator.next());
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            };
         }
 
         @Override
         public void forEach(final Consumer<? super K> action) {
-            this.promote();
             for(final Map.Entry<K, ExpungingValue<V>> entry : SyncMapImpl.this.read.entrySet()) {
                 final ExpungingValue<V> value = entry.getValue();
                 if(!value.isExpunged() && value.getValue() != null) {
@@ -414,7 +473,7 @@ import java.util.function.Function;
         private void promote() {
             if(SyncMapImpl.this.readAmended) {
                 synchronized(SyncMapImpl.this.lock) {
-                    if(SyncMapImpl.this.readAmended) {
+                    if(SyncMapImpl.this.readAmended && SyncMapImpl.this.dirty != null) {
                         SyncMapImpl.this.promoteLocked();
                     }
                 }
@@ -434,6 +493,11 @@ import java.util.function.Function;
         }
 
         @Override
+        public boolean remove(final Object value) {
+            return SyncMapImpl.this.removeValue(value);
+        }
+
+        @Override
         public boolean addAll(final @NonNull Collection<? extends V> collection) {
             throw new UnsupportedOperationException();
         }
@@ -450,10 +514,36 @@ import java.util.function.Function;
             return new ValueIterator(SyncMapImpl.this.read.entrySet().iterator());
         }
 
+        @Override
+        public Spliterator<V> spliterator() {
+            return new Spliterators.AbstractSpliterator<V>(this.size(), Spliterator.IMMUTABLE) {
+                final Iterator<V> iterator = ValueCollection.this.iterator();
+
+                public boolean tryAdvance(final Consumer<? super V> action) {
+                    if (this.iterator.hasNext()) {
+                        action.accept(this.iterator.next());
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            };
+        }
+
+        @Override
+        public void forEach(final Consumer<? super V> action) {
+            for(final Map.Entry<K, ExpungingValue<V>> entry : SyncMapImpl.this.read.entrySet()) {
+                final ExpungingValue<V> value = entry.getValue();
+                if(!value.isExpunged() && value.getValue() != null) {
+                    action.accept(value.getValue());
+                }
+            }
+        }
+
         private void promote() {
             if(SyncMapImpl.this.readAmended) {
                 synchronized(SyncMapImpl.this.lock) {
-                    if(SyncMapImpl.this.readAmended) {
+                    if(SyncMapImpl.this.readAmended && SyncMapImpl.this.dirty != null) {
                         SyncMapImpl.this.promoteLocked();
                     }
                 }
@@ -468,13 +558,18 @@ import java.util.function.Function;
         }
 
         @Override
-        public boolean contains(final Object key) {
-            return SyncMapImpl.this.containsKey(key);
+        public boolean contains(final Object entry) {
+            if (!(entry instanceof Map.Entry)) return false;
+            final Map.Entry<?, ?> mapEntry = (Entry<?, ?>) entry;
+            final V value = SyncMapImpl.this.get(mapEntry.getKey());
+            return value != null && Objects.equals(mapEntry.getValue(), value);
         }
 
         @Override
-        public boolean remove(final Object key) {
-            return SyncMapImpl.this.remove(key) != null;
+        public boolean remove(final Object entry) {
+            if (!(entry instanceof Map.Entry)) return false;
+            final Map.Entry<?, ?> mapEntry = (Entry<?, ?>) entry;
+            return SyncMapImpl.this.remove(mapEntry.getKey()) != null;
         }
 
         @Override
@@ -499,7 +594,7 @@ import java.util.function.Function;
             return new Spliterators.AbstractSpliterator<Map.Entry<K, V>>(this.size(), Spliterator.IMMUTABLE) {
                 final Iterator<Map.Entry<K, V>> iterator = EntrySet.this.iterator();
 
-                public boolean tryAdvance(Consumer<? super Map.Entry<K, V>> action) {
+                public boolean tryAdvance(final Consumer<? super Map.Entry<K, V>> action) {
                     if (this.iterator.hasNext()) {
                         action.accept(this.iterator.next());
                         return true;
@@ -512,7 +607,6 @@ import java.util.function.Function;
 
         @Override
         public void forEach(final Consumer<? super Map.Entry<K, V>> action) {
-            this.promote();
             for(final Map.Entry<K, ExpungingValue<V>> entry : SyncMapImpl.this.read.entrySet()) {
                 final ExpungingValue<V> value = entry.getValue();
                 if(!value.isExpunged() && value.getValue() != null) {
@@ -524,7 +618,7 @@ import java.util.function.Function;
         private void promote() {
             if(SyncMapImpl.this.readAmended) {
                 synchronized(SyncMapImpl.this.lock) {
-                    if(SyncMapImpl.this.readAmended) {
+                    if(SyncMapImpl.this.readAmended && SyncMapImpl.this.dirty != null) {
                         SyncMapImpl.this.promoteLocked();
                     }
                 }
@@ -533,94 +627,174 @@ import java.util.function.Function;
     }
 
     private class KeyIterator implements Iterator<K> {
-        private final Iterator<K> backingIterator;
-        private K previous;
+        private final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator;
+        private Map.Entry<K, ExpungingValue<V>> next;
+        private Map.Entry<K, ExpungingValue<V>> current;
 
-        private KeyIterator(final Iterator<K> backingIterator) {
+        private KeyIterator(final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator) {
             this.backingIterator = backingIterator;
+            this.current = this.next = null;
+            if(this.backingIterator.hasNext()) {
+                while(this.next == null && this.backingIterator.hasNext()) {
+                    final Map.Entry<K, ExpungingValue<V>> entry = this.backingIterator.next();
+                    final ExpungingValue<V> expungingValue = entry.getValue();
+                    if(expungingValue.isExpunged() || expungingValue.getValue() == null) continue;
+                    this.next = entry;
+                }
+            }
         }
 
         @Override
         public boolean hasNext() {
-            return this.backingIterator.hasNext();
+            return this.next != null;
         }
 
         @Override
         public K next() {
-            return this.previous = this.backingIterator.next();
+            final Map.Entry<K, ExpungingValue<V>> entry = this.next;
+            this.current = this.next = null;
+            if(entry == null) throw new NoSuchElementException();
+            this.current = entry;
+            while(this.next == null && this.backingIterator.hasNext()) {
+                this.next = this.backingIterator.next();
+                final ExpungingValue<V> expungingValue = this.next.getValue();
+                if(expungingValue.isExpunged() || expungingValue.getValue() == null) {
+                    this.next = null;
+                }
+            }
+            return entry.getKey();
         }
 
         @Override
         public void remove() {
-            if(this.previous == null) return;
-            SyncMapImpl.this.remove(this.previous);
+            if(this.current == null) return;
+            SyncMapImpl.this.remove(this.current.getKey());
         }
 
         @Override
         public void forEachRemaining(final Consumer<? super K> action) {
-            this.backingIterator.forEachRemaining(action);
+            if(this.next != null) action.accept(this.next.getKey());
+            this.backingIterator.forEachRemaining(entry -> {
+                final ExpungingValue<V> expungingValue = entry.getValue();
+                if(!expungingValue.isExpunged() && expungingValue.getValue() != null) {
+                    action.accept(entry.getKey());
+                }
+            });
         }
     }
 
     private class ValueIterator implements Iterator<V> {
         private final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator;
-        private Map.Entry<K, ExpungingValue<V>> previous;
+        private Map.Entry<K, ExpungingValue<V>> next;
+        private Map.Entry<K, ExpungingValue<V>> current;
 
         private ValueIterator(final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator) {
             this.backingIterator = backingIterator;
+            this.current = this.next = null;
+            if(this.backingIterator.hasNext()) {
+                while(this.next == null && this.backingIterator.hasNext()) {
+                    final Map.Entry<K, ExpungingValue<V>> entry = this.backingIterator.next();
+                    final ExpungingValue<V> expungingValue = entry.getValue();
+                    if(expungingValue.isExpunged() || expungingValue.getValue() == null) continue;
+                    this.next = entry;
+                }
+            }
         }
 
         @Override
         public boolean hasNext() {
-            return this.backingIterator.hasNext();
+            return this.next != null;
         }
 
         @Override
         public V next() {
-            this.previous = this.backingIterator.next();
-            return this.previous.getValue().getValue();
+            final Map.Entry<K, ExpungingValue<V>> entry = this.next;
+            this.current = this.next = null;
+            if(entry == null) throw new NoSuchElementException();
+            final ExpungingValue<V> value = entry.getValue();
+            this.current = entry;
+            while(this.next == null && this.backingIterator.hasNext()) {
+                this.next = this.backingIterator.next();
+                final ExpungingValue<V> expungingValue = this.next.getValue();
+                if(expungingValue.isExpunged() || expungingValue.getValue() == null) {
+                    this.next = null;
+                }
+            }
+            return value.getValue();
         }
 
         @Override
         public void remove() {
-            if(this.previous == null) return;
-            SyncMapImpl.this.remove(this.previous.getKey(), this.previous.getValue());
+            if(this.current == null) return;
+            SyncMapImpl.this.remove(this.current.getKey());
         }
 
         @Override
         public void forEachRemaining(final Consumer<? super V> action) {
-            this.backingIterator.forEachRemaining(entry -> action.accept(entry.getValue().getValue()));
+            if(this.next != null) action.accept(this.next.getValue().getValue());
+            this.backingIterator.forEachRemaining(entry -> {
+                final ExpungingValue<V> expungingValue = entry.getValue();
+                if(!expungingValue.isExpunged() && expungingValue.getValue() != null) {
+                    action.accept(expungingValue.getValue());
+                }
+            });
         }
     }
 
     private class EntryIterator implements Iterator<Map.Entry<K, V>> {
         private final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator;
-        private Map.Entry<K, ExpungingValue<V>> previous;
+        private Map.Entry<K, ExpungingValue<V>> next;
+        private Map.Entry<K, ExpungingValue<V>> current;
 
         private EntryIterator(final Iterator<Map.Entry<K, ExpungingValue<V>>> backingIterator) {
             this.backingIterator = backingIterator;
+            this.current = this.next = null;
+            if(this.backingIterator.hasNext()) {
+                while(this.next == null && this.backingIterator.hasNext()) {
+                    final Map.Entry<K, ExpungingValue<V>> entry = this.backingIterator.next();
+                    final ExpungingValue<V> expungingValue = entry.getValue();
+                    if(expungingValue.isExpunged() || expungingValue.getValue() == null) continue;
+                    this.next = entry;
+                }
+            }
         }
 
         @Override
         public boolean hasNext() {
-            return this.backingIterator.hasNext();
+            return this.next != null;
         }
 
         @Override
         public Map.Entry<K, V> next() {
-            this.previous = this.backingIterator.next();
-            return new MapEntry(this.previous);
+            final Map.Entry<K, ExpungingValue<V>> entry = this.next;
+            this.current = this.next = null;
+            if(entry == null) throw new NoSuchElementException();
+            this.current = entry;
+            while(this.next == null && this.backingIterator.hasNext()) {
+                this.next = this.backingIterator.next();
+                final ExpungingValue<V> expungingValue = this.next.getValue();
+                if(expungingValue.isExpunged() || expungingValue.getValue() == null) {
+                    this.next = null;
+                }
+            }
+            return new MapEntry(entry);
         }
 
         @Override
         public void remove() {
-            if(this.previous == null) return;
-            SyncMapImpl.this.remove(this.previous.getKey(), this.previous.getValue());
+            if(this.current == null) return;
+            SyncMapImpl.this.remove(this.current.getKey());
         }
 
         @Override
         public void forEachRemaining(final Consumer<? super Map.Entry<K, V>> action) {
-            this.backingIterator.forEachRemaining(value -> action.accept(new MapEntry(value)));
+            if(this.next != null) action.accept(new MapEntry(this.next));
+            this.backingIterator.forEachRemaining(entry -> {
+                final ExpungingValue<V> expungingValue = entry.getValue();
+                if(!expungingValue.isExpunged() && expungingValue.getValue() != null) {
+                    action.accept(new MapEntry(entry));
+                }
+            });
         }
     }
 }
