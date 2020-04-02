@@ -23,6 +23,7 @@
  */
 package net.kyori.mu.math;
 
+import java.util.List;
 import java.util.Random;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -320,4 +321,32 @@ public final class MuMath {
     }
     return sum;
   }
+
+  /**
+   * Sums up {@code values}.
+   * @param values the values
+   * @return the sum
+   */
+  public static int sum(final List<Integer> values) {
+    return values.stream().mapToInt(i -> i).sum();
+  }
+
+  /**
+   * Gets the maximum value from a List of values.
+   * @param values the values
+   * @return the maximum if the list is non empty, 0 otherwise.
+   */
+  public static int max(final List<Integer> values) {
+    return values.stream().reduce((v1,v2)-> v1 > v2 ? v1 : v2).orElse(0);
+  }
+
+  /**
+   * Gets the minimum value from a List of values.
+   * @param values the values
+   * @return the minimum if the list is non empty, 0 otherwise.
+   */
+  public static int min(final List<Integer> values) {
+    return values.stream().reduce((v1,v2)-> v1 < v2 ? v1 : v2).orElse(0);
+  }
+
 }
