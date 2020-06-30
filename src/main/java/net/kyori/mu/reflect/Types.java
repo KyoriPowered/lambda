@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package net.kyori.mu.reflect;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Objects;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -32,7 +33,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /**
  * A collection of utilities for working with types.
  */
-public interface Types {
+public final class Types {
+  private Types() {
+  }
+
   /**
    * Finds a class in the hierarchy matching the provided {@code type}, {@code predicate}, and {@code function}.
    *
@@ -44,12 +48,11 @@ public interface Types {
    */
   // thanks, kenzie
   @SuppressWarnings("unchecked")
-  static <T, R> @Nullable R find(final @NonNull Class<T> first, final @NonNull Function<Class<? super T>, R> function) {
+  public static <T, R> @Nullable R find(final @NonNull Class<T> first, final @NonNull Function<Class<? super T>, R> function) {
     final Deque<Class<? super T>> classes = new ArrayDeque<>();
     classes.add(first);
-
     while(!classes.isEmpty()) {
-      final /* @Nullable */ Class<? super T> next = classes.remove();
+      final Class<? super T> next = classes.remove();
 
       final /* @Nullable */ R result = function.apply(next);
       if(result != null) {
@@ -76,7 +79,7 @@ public interface Types {
    * @param b class b
    * @return {@code true} if {@code a} and {@code b} are in the same package
    */
-  static boolean inSamePackage(final @NonNull Class<?> a, final @NonNull Class<?> b) {
-    return a.getPackage().equals(b.getPackage());
+  /* package */ static boolean inSamePackage(final @NonNull Class<?> a, final @NonNull Class<?> b) {
+    return Objects.equals(a.getPackage(), b.getPackage());
   }
 }

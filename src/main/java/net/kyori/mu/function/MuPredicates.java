@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -107,23 +107,23 @@ public final class MuPredicates {
   private enum Impl implements Predicate<Object> {
     ALWAYS_FALSE {
       @Override public boolean test(final Object object) { return false; }
-      @Override public Predicate<Object> and(final Predicate<? super Object> other) { return this; }
-      @Override public Predicate<Object> negate() { return ALWAYS_TRUE; }
-      @Override public Predicate<Object> or(final Predicate<? super Object> other) { return other; }
+      @Override public @NonNull Predicate<Object> and(final @NonNull Predicate<? super Object> other) { return this; }
+      @Override public @NonNull Predicate<Object> negate() { return ALWAYS_TRUE; }
+      @Override public @NonNull Predicate<Object> or(final @NonNull Predicate<? super Object> other) { return other; }
     },
     ALWAYS_TRUE {
       @Override public boolean test(final Object object) { return true; }
-      @Override public Predicate<Object> and(final Predicate<? super Object> other) { return other; }
-      @Override public Predicate<Object> negate() { return ALWAYS_FALSE; }
-      @Override public Predicate<Object> or(final Predicate<? super Object> other) { return this; }
+      @Override public @NonNull Predicate<Object> and(final @NonNull Predicate<? super Object> other) { return other; }
+      @Override public @NonNull Predicate<Object> negate() { return ALWAYS_FALSE; }
+      @Override public @NonNull Predicate<Object> or(final @NonNull Predicate<? super Object> other) { return this; }
     },
     IS_NULL {
       @Override public boolean test(final Object object) { return object == null; }
-      @Override public Predicate<Object> negate() { return NON_NULL; }
+      @Override public @NonNull Predicate<Object> negate() { return NON_NULL; }
     },
     NON_NULL {
       @Override public boolean test(final Object object) { return object != null; }
-      @Override public Predicate<Object> negate() { return IS_NULL; }
+      @Override public @NonNull Predicate<Object> negate() { return IS_NULL; }
     };
   }
 }

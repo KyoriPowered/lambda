@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /**
  * A collection of utilities for working with comparables.
  */
-public interface Comparables {
+public final class Comparables {
+  private Comparables() {
+  }
+
   /**
    * Checks if {@code left} is less than {@code right}.
    *
@@ -37,7 +40,7 @@ public interface Comparables {
    * @param <C> the object type
    * @return {@code true} if {@code left} is less than {@code right}, {@code false} otherwise
    */
-  static <C extends Comparable<C>> boolean lessThan(final @NonNull C left, final @NonNull C right) {
+  public static <C extends Comparable<C>> boolean lessThan(final @NonNull C left, final @NonNull C right) {
     return left.compareTo(right) < 0;
   }
 
@@ -49,7 +52,7 @@ public interface Comparables {
    * @param <C> the object type
    * @return {@code true} if {@code left} is less than or equal to {@code right}, {@code false} otherwise
    */
-  static <C extends Comparable<C>> boolean lessThanOrEqual(final @NonNull C left, final @NonNull C right) {
+  public static <C extends Comparable<C>> boolean lessThanOrEqual(final @NonNull C left, final @NonNull C right) {
     return left.compareTo(right) <= 0;
   }
 
@@ -61,7 +64,7 @@ public interface Comparables {
    * @param <C> the object type
    * @return {@code true} if {@code left} is greater than {@code right}, {@code false} otherwise
    */
-  static <C extends Comparable<C>> boolean greaterThan(final @NonNull C left, final @NonNull C right) {
+  public static <C extends Comparable<C>> boolean greaterThan(final @NonNull C left, final @NonNull C right) {
     return left.compareTo(right) > 0;
   }
 
@@ -73,7 +76,7 @@ public interface Comparables {
    * @param <C> the object type
    * @return {@code true} if {@code left} is greater than or equal to {@code right}, {@code false} otherwise
    */
-  static <C extends Comparable<C>> boolean greaterThanOrEqual(final @NonNull C left, final @NonNull C right) {
+  public static <C extends Comparable<C>> boolean greaterThanOrEqual(final @NonNull C left, final @NonNull C right) {
     return left.compareTo(right) >= 0;
   }
 
@@ -85,7 +88,7 @@ public interface Comparables {
    * @param <C> the object type
    * @return the minimum value
    */
-  static <C extends Comparable<C>> @NonNull C min(final @NonNull C left, final @NonNull C right) {
+  public static <C extends Comparable<C>> @NonNull C min(final @NonNull C left, final @NonNull C right) {
     return lessThanOrEqual(left, right) ? left : right;
   }
 
@@ -97,7 +100,7 @@ public interface Comparables {
    * @param <C> the object type
    * @return the maximum value
    */
-  static <C extends Comparable<C>> @NonNull C max(final @NonNull C left, final @NonNull C right) {
+  public static <C extends Comparable<C>> @NonNull C max(final @NonNull C left, final @NonNull C right) {
     return greaterThanOrEqual(left, right) ? left : right;
   }
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -60,5 +60,16 @@ class MuStreamsTest {
   void testOf_optional() {
     assertThat(MuStreams.of(Optional.empty())).isEmpty();
     assertThat(MuStreams.of(Optional.of("abc"))).containsExactly("abc");
+  }
+
+  @Test
+  void testCast() {
+    class A {}
+    class B {}
+    final A a0 = new A();
+    final A a1 = new A();
+    final B b0 = new B();
+    final B b1 = new B();
+    assertThat(MuStreams.cast(Stream.of(a0, b0, a1, b1), A.class)).containsExactly(a0, a1).inOrder();
   }
 }

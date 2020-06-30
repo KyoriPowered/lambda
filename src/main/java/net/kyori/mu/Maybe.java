@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package net.kyori.mu;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -61,10 +62,10 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
   );
 
   /**
-   * Returns an empty {@code Maybe}.
+   * Returns a {@code Maybe} containing nothing.
    *
    * @param <T> the type
-   * @return an empty {@code Maybe}
+   * @return a {@code Maybe} containing nothing.
    */
   @SuppressWarnings("unchecked")
   static <T> @NonNull Maybe<T> nothing() {
@@ -136,6 +137,16 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
   T orGet(final @NonNull Supplier<? extends T> other);
 
   /**
+   * Gets the value if present, otherwise throws a {@link NoSuchElementException}.
+   *
+   * @return the value
+   * @throws NoSuchElementException if no value is present
+   */
+  default @NonNull T orThrow() throws NoSuchElementException {
+    return this.orThrow(NoSuchElementException::new);
+  }
+
+  /**
    * Gets the value if present, otherwise throws an exception of type {@code X} supplied by {@code supplier} if not.
    *
    * @param supplier the exception supplier
@@ -143,7 +154,7 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
    * @return the value
    * @throws X if no value is present
    */
-  <X extends Throwable> T orThrow(final @NonNull Supplier<X> supplier) throws X;
+  <X extends Throwable> @NonNull T orThrow(final @NonNull Supplier<X> supplier) throws X;
 
   /**
    * Returns a {@code Maybe} containing the value if it is present, otherwise returns {@code that}.
@@ -177,6 +188,15 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
    * @return a {@code Maybe} containing the result of applying the given function to the value if it is present, otherwise an empty {@code Maybe}
    */
   <U> @NonNull Maybe<U> map(final @NonNull Function<? super T, ? extends U> function);
+
+  /**
+   * Attempts to cast from {@code T} to {@code X} if the value contained is an instance of {@code type}.
+   *
+   * @param type the type
+   * @param <X> the type
+   * @return a {@code Maybe}
+   */
+  <X> @NonNull Maybe<X> cast(final @NonNull Class<X> type);
 
   /**
    * Returns the result of applying the given function to the value if it is present, otherwise returns an empty {@code Maybe}.
@@ -223,9 +243,21 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
    * @param <T> the value type
    * @return a collector that accumulates zero or one elements into a {@code Maybe}
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"rawtypes", "unchecked"})
   static <T> @NonNull Collector<T, ?, Maybe<T>> collector() {
     return (Collector) COLLECTOR;
+  }
+
+  /**
+   * Casts {@code maybe} to an maybe of type {@code type} if the value held by {@code maybe} is an instance of {@code type}
+   *
+   * @param maybe the maybe
+   * @param type the type
+   * @param <T> the type
+   * @return a maybe
+   */
+  static <T> @NonNull Maybe<T> cast(final @NonNull Maybe<?> maybe, final @NonNull Class<T> type) {
+    return maybe.cast(type);
   }
 
   /**
@@ -234,7 +266,7 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
    * @param object the object
    * @param type the type
    * @param <T> the type
-   * @return the maybe
+   * @return a maybe
    */
   @SuppressWarnings("unchecked")
   static <T> @NonNull Maybe<T> cast(final @Nullable Object object, final @NonNull Class<T> type) {
@@ -251,7 +283,8 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
   @SafeVarargs
   @SuppressWarnings("unchecked")
   static <T> @NonNull Maybe<T> first(final @NonNull Maybe<? extends T>... maybes) {
-    for(final Maybe<? extends T> maybe : maybes) {
+    for(int i = 0, length = maybes.length; i < length; i++) {
+      final Maybe<? extends T> maybe = maybes[i];
       if(maybe.isJust()) {
         return (Maybe<T>) maybe;
       }
@@ -308,7 +341,12 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
     }
 
     @Override
-    public <X extends Throwable> T orThrow(final @NonNull Supplier<X> supplier) throws X {
+    public @NonNull T orThrow() throws NoSuchElementException {
+      throw new NoSuchElementException();
+    }
+
+    @Override
+    public <X extends Throwable> @NonNull T orThrow(final @NonNull Supplier<X> supplier) throws X {
       throw supplier.get();
     }
 
@@ -331,6 +369,11 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
 
     @Override
     public <U> @NonNull Maybe<U> map(final @NonNull Function<? super T, ? extends U> function) {
+      return nothing();
+    }
+
+    @Override
+    public <X> @NonNull Maybe<X> cast(final @NonNull Class<X> type) {
       return nothing();
     }
 
@@ -424,7 +467,12 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
     }
 
     @Override
-    public <X extends Throwable> T orThrow(final @NonNull Supplier<X> supplier) {
+    public @NonNull T orThrow() throws NoSuchElementException {
+      return this.value;
+    }
+
+    @Override
+    public <X extends Throwable> @NonNull T orThrow(final @NonNull Supplier<X> supplier) {
       return this.value;
     }
 
@@ -446,6 +494,15 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
     @Override
     public <U> @NonNull Maybe<U> map(final @NonNull Function<? super T, ? extends U> function) {
       return just(function.apply(this.value));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <X> @NonNull Maybe<X> cast(final @NonNull Class<X> type) {
+      return type.isInstance(this.value)
+        // not necessary to re-wrap, we can just cast
+        ? (Maybe<X>) this
+        : nothing();
     }
 
     @Override
@@ -499,8 +556,8 @@ public interface Maybe<T> extends Examinable, Iterable<T> {
     public boolean equals(final @Nullable Object other) {
       if(this == other) return true;
       if(other == null || this.getClass() != other.getClass()) return false;
-      final Just<?> just = (Just<?>) other;
-      return Objects.equals(this.value, just.value);
+      final Just<?> that = (Just<?>) other;
+      return Objects.equals(this.value, that.value);
     }
 
     @Override

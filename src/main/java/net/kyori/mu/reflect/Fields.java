@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,14 +29,17 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /**
  * A collection of utilities for working with fields.
  */
-public interface Fields {
+public final class Fields {
+  private Fields() {
+  }
+
   /**
    * Gets the field associated with {@code constant}.
    *
    * @param constant the constant
    * @return the field
    */
-  static @NonNull Field get(final @NonNull Enum<?> constant) {
+  public static @NonNull Field field(final @NonNull Enum<?> constant) {
     try {
       return constant.getDeclaringClass().getDeclaredField(constant.name());
     } catch(final NoSuchFieldException e) {

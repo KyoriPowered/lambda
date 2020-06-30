@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,11 +30,34 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /**
  * A collection of utilities for working with class members.
  */
-public interface Members {
+public final class Members {
   /**
    * The access modifiers that can be applied to a member.
    */
-  int ACCESS_MODIFIERS = Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE;
+  private static final int ACCESS_MODIFIERS = Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE;
+
+  private Members() {
+  }
+
+  /**
+   * Checks if {@code member} is public.
+   *
+   * @param member the member
+   * @return {@code true} if public, {@code false} otherwise
+   */
+  public static boolean isPublic(final @NonNull Member member) {
+    return Modifier.isPublic(member.getModifiers());
+  }
+
+  /**
+   * Checks if {@code member} is protected.
+   *
+   * @param member the member
+   * @return {@code true} if protected, {@code false} otherwise
+   */
+  public static boolean isProtected(final @NonNull Member member) {
+    return Modifier.isProtected(member.getModifiers());
+  }
 
   /**
    * Checks if {@code member} is package-private.
@@ -42,8 +65,28 @@ public interface Members {
    * @param member the member
    * @return {@code true} if package-private, {@code false} otherwise
    */
-  static boolean isPackagePrivate(final @NonNull Member member) {
+  public static boolean isPackagePrivate(final @NonNull Member member) {
     return (member.getModifiers() & ACCESS_MODIFIERS) == 0;
+  }
+
+  /**
+   * Checks if {@code member} is private.
+   *
+   * @param member the member
+   * @return {@code true} if private, {@code false} otherwise
+   */
+  public static boolean isPrivate(final @NonNull Member member) {
+    return Modifier.isPrivate(member.getModifiers());
+  }
+
+  /**
+   * Checks if {@code member} is abstract.
+   *
+   * @param member the member
+   * @return {@code true} if abstract, {@code false} otherwise
+   */
+  public static boolean isAbstract(final @NonNull Member member) {
+    return Modifier.isAbstract(member.getModifiers());
   }
 
   /**
@@ -52,27 +95,17 @@ public interface Members {
    * @param member the member
    * @return {@code true} if final, {@code false} otherwise
    */
-  static boolean isFinal(final @NonNull Member member) {
+  public static boolean isFinal(final @NonNull Member member) {
     return Modifier.isFinal(member.getModifiers());
   }
 
   /**
-   * Checks if {@code member} is package-private.
+   * Checks if {@code member} is static.
    *
    * @param member the member
-   * @return {@code true} if package-private, {@code false} otherwise
+   * @return {@code true} if static, {@code false} otherwise
    */
-  static boolean isPrivate(final @NonNull Member member) {
-    return Modifier.isPrivate(member.getModifiers());
-  }
-
-  /**
-   * Checks if {@code member} is package-private.
-   *
-   * @param member the member
-   * @return {@code true} if package-private, {@code false} otherwise
-   */
-  static boolean isStatic(final @NonNull Member member) {
+  public static boolean isStatic(final @NonNull Member member) {
     return Modifier.isStatic(member.getModifiers());
   }
 }

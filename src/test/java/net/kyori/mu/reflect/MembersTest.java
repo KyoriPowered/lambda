@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,10 +23,12 @@
  */
 package net.kyori.mu.reflect;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.reflect.Member;
 import java.lang.reflect.Modifier;
+import java.util.function.IntPredicate;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+import net.kyori.mu.stream.MuStreams;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,17 +37,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MembersTest {
   @Test
-  void testIsFinal_field() {
-    for(final Field field : A.class.getDeclaredFields()) {
-      assertEquals(Modifier.isFinal(field.getModifiers()), Members.isFinal(field));
-    }
+  void testIsPublic() {
+    assertEach(allDeclaredMembers(A.class), Modifier::isPublic, Members::isPublic);
   }
 
   @Test
-  void testIsFinal_method() {
-    for(final Method method : A.class.getDeclaredMethods()) {
-      assertEquals(Modifier.isFinal(method.getModifiers()), Members.isFinal(method));
-    }
+  void testIsProtected() {
+    assertEach(allDeclaredMembers(A.class), Modifier::isProtected, Members::isProtected);
   }
 
   @Test
@@ -73,66 +71,57 @@ class MembersTest {
   }
 
   @Test
-  void testIsPrivate_constructor() {
-    for(final Constructor<?> constructor : A.class.getDeclaredConstructors()) {
-      assertEquals(Modifier.isPrivate(constructor.getModifiers()), Members.isPrivate(constructor));
-    }
+  void testIsPrivate() {
+    assertEach(allDeclaredMembers(A.class), Modifier::isPrivate, Members::isPrivate);
   }
 
   @Test
-  void testIsPrivate_field() {
-    for(final Field field : A.class.getDeclaredFields()) {
-      assertEquals(Modifier.isPrivate(field.getModifiers()), Members.isPrivate(field));
-    }
+  void testIsAbstract() {
+    assertEach(allDeclaredMembers(A.class), Modifier::isAbstract, Members::isAbstract);
   }
 
   @Test
-  void testIsPrivate_method() {
-    for(final Method method : A.class.getDeclaredMethods()) {
-      assertEquals(Modifier.isPrivate(method.getModifiers()), Members.isPrivate(method));
-    }
+  void testIsFinal() {
+    assertEach(allDeclaredMembers(A.class), Modifier::isFinal, Members::isFinal);
   }
 
   @Test
-  void testIsStatic_constructor() {
-    for(final Constructor<?> constructor : A.class.getDeclaredConstructors()) {
-      assertEquals(Modifier.isStatic(constructor.getModifiers()), Members.isStatic(constructor));
-    }
+  void testIsStatic() {
+    assertEach(allDeclaredMembers(A.class), Modifier::isStatic, Members::isStatic);
   }
 
-  @Test
-  void testIsStatic_field() {
-    for(final Field field : A.class.getDeclaredFields()) {
-      assertEquals(Modifier.isStatic(field.getModifiers()), Members.isStatic(field));
-    }
+  private static Stream<Member> allDeclaredMembers(final Class<?> type) {
+    return MuStreams.concat(
+      Stream.of(type.getDeclaredFields()),
+      Stream.of(type.getDeclaredConstructors()),
+      Stream.of(type.getDeclaredMethods())
+    );
   }
 
-  @Test
-  void testIsStatic_method() {
-    for(final Method method : A.class.getDeclaredMethods()) {
-      assertEquals(Modifier.isStatic(method.getModifiers()), Members.isStatic(method));
-    }
+  private static <A extends Member> void assertEach(final Stream<A> objects, final IntPredicate theirs, final Predicate<A> ours) {
+    objects.forEach(object -> assertEquals(theirs.test(object.getModifiers()), ours.test(object)));
   }
 
   @SuppressWarnings("unused")
-  private static class A {
+  private static abstract class A {
     public int a;
     protected int b;
-    int c;
+    /* package */ int c;
     private int d;
     private static int e;
     private static final int F = 0;
 
     public A(final int a) {}
     protected A(final int a, final int b) {}
-    A(final int a, final int b, final int c) {}
+    /* package */ A(final int a, final int b, final int c) {}
     private A(final int a, final int b, final int c, final int d) {}
 
     public void a() {}
     protected void b() {}
-    void c() {}
+    /* package */ void c() {}
     private void d() {}
     private static void e() {}
     public final void f() {}
+    public abstract void g();
   }
 }

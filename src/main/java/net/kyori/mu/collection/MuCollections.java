@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /**
  * A collection of utilities for working with collections.
  */
-public interface MuCollections {
+public final class MuCollections {
+  private MuCollections() {
+  }
+
   /**
    * Reduces a collection to a single element of the inhabiting type depending on the collection's size.
    *
@@ -47,10 +50,12 @@ public interface MuCollections {
    * @param <E> the element type
    * @return an element
    */
-  static <E> /* @Nullable */ E reduce(final @NonNull Collection<? extends E> collection, final /* @Nullable */ E empty, final @NonNull Function<Iterable<? extends E>, ? extends E> reducer) {
-    switch(collection.size()) {
-      case 0: return empty;
-      case 1: return collection.iterator().next();
+  public static <E> /* @Nullable */ E reduce(final @NonNull Collection<? extends E> collection, final /* @Nullable */ E empty, final @NonNull Function<Iterable<? extends E>, ? extends E> reducer) {
+    final int size = collection.size();
+    if(size == 0) {
+      return empty;
+    } else if(size == 1) {
+      return collection.iterator().next();
     }
     return reducer.apply(collection);
   }

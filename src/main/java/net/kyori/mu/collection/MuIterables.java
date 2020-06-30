@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /**
  * A collection of utilities for working with iterables.
  */
-public interface MuIterables {
+public final class MuIterables {
+  private MuIterables() {
+  }
+
   /**
    * Folds {@code elements} from the left, starting with {@code seed} and successively calling {@code combiner}.
    *
@@ -47,7 +50,7 @@ public interface MuIterables {
    * @param <T> the type to fold over
    * @return a folded value
    */
-  static <E, T> /* @Nullable */ T lfold(final @NonNull Iterable<? extends E> elements, final /* @Nullable */ T seed, final @NonNull BiFunction<? super T, E, T> combiner) {
+  public static <E, T> /* @Nullable */ T lfold(final @NonNull Iterable<? extends E> elements, final /* @Nullable */ T seed, final @NonNull BiFunction<? super T, E, T> combiner) {
     T result = seed;
     for(final E element : elements) {
       result = combiner.apply(result, element);
@@ -68,7 +71,7 @@ public interface MuIterables {
    * @return an element
    */
   @SuppressWarnings("unchecked")
-  static <E> /* @Nullable */ E reduce(final @NonNull Iterable<? extends E> iterable, final /* @Nullable */ E empty, final @NonNull Function<Iterable<? extends E>, ? extends E> reducer) {
+  public static <E> /* @Nullable */ E reduce(final @NonNull Iterable<? extends E> iterable, final /* @Nullable */ E empty, final @NonNull Function<Iterable<? extends E>, ? extends E> reducer) {
     if(iterable instanceof Collection<?>) {
       return MuCollections.reduce((Collection<E>) iterable, empty, reducer);
     }

@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,11 +32,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 class MuMapsTest {
   @Test
-  void testComputeIfAbsent() {
+  void testSupplyIfAbsent() {
     final Map<String, String> map = new HashMap<>();
     assertNull(map.get("abc"));
-    final String value = MuMaps.computeIfAbsent(map, "abc", () -> "def");
-    assertEquals("def", value);
+    final String v0 = MuMaps.supplyIfAbsent(map, "abc", () -> "def");
+    assertEquals("def", v0);
+    assertEquals("def", map.get("abc"));
+    final String v1 = MuMaps.supplyIfAbsent(map, "abc", () -> "ghi");
+    assertEquals("def", v1);
     assertEquals("def", map.get("abc"));
   }
 }

@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-/* package */ final class LoadingMapImpl<K, V> extends ForwardingMap.Impl<K, V> implements LoadingMap<K, V> {
+/* package */ final class LoadingMapImpl<K, V> implements ForwardingMap<K, V>, LoadingMap<K, V> {
   private final Map<K, V> map;
   private final Function<K, V> function;
 

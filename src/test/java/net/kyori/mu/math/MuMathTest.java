@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -248,5 +248,27 @@ class MuMathTest {
       assertTrue(value >= min);
       assertTrue(value <= max);
     }
+  }
+
+  @Test
+  void testSum_double() {
+    assertEquals(4d, MuMath.sum(1d, 2d, 1d));
+    assertEquals(6.9d, MuMath.sum(0.6d, 1d, 5.3d));
+  }
+
+  @Test
+  void testSum_float() {
+    assertEquals(4f, MuMath.sum(1f, 2f, 1f));
+    assertEquals(6.9f, MuMath.sum(0.6f, 1f, 5.3f));
+  }
+
+  @Test
+  void testSum_int() {
+    assertEquals(4, MuMath.sum(1, 2, 1));
+  }
+
+  @Test
+  void testSum_long() {
+    assertEquals(4L, MuMath.sum(1L, 2L, 1L));
   }
 }

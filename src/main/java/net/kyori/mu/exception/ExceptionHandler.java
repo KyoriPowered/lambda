@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,18 +58,4 @@ public interface ExceptionHandler {
    * @param source the source
    */
   void handleException(final @NonNull Throwable throwable, final @Nullable Object source);
-}
-
-/**
- * An exception handler that does nothing.
- */
-final class NopeExceptionHandler implements ExceptionHandler {
-  static final NopeExceptionHandler INSTANCE = new NopeExceptionHandler();
-
-  private NopeExceptionHandler() {
-  }
-
-  @Override
-  public void handleException(final @NonNull Throwable throwable, final @Nullable Object source) {
-  }
 }

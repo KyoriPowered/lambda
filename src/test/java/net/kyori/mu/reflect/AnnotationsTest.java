@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,51 +35,60 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 class AnnotationsTest {
   @Test
-  void testFind() throws NoSuchMethodException {
-    assertAnnotationValue("class=a", Annotations.find((AnnotatedElement) A.class, Foo.class));
-    assertAnnotationValue("class=b", Annotations.find((AnnotatedElement) B.class, Foo.class));
-    assertAnnotationValue("class=b,method=a", Annotations.find((AnnotatedElement) B.class.getDeclaredMethod("a"), Foo.class));
+  void testFindDeclared() throws NoSuchMethodException {
+    assertAnnotationValue("class=a", Annotations.findDeclared((AnnotatedElement) A.class, Foo.class));
+    assertAnnotationValue("class=b", Annotations.findDeclared((AnnotatedElement) B.class, Foo.class));
+    assertAnnotationValue("class=b,method=a", Annotations.findDeclared((AnnotatedElement) B.class.getDeclaredMethod("a"), Foo.class));
   }
 
   @Test
-  void testFindClass() {
-    assertAnnotationValue("class=b", Annotations.find(B.class, Foo.class));
-    assertAnnotationValue("class=b", Annotations.find(C.class, Foo.class));
-    assertAnnotationValue("class=d", Annotations.find(D.class, Foo.class));
+  void testFindDeclaredClass() {
+    assertAnnotationValue("class=b", Annotations.findDeclared(B.class, Foo.class));
+    assertAnnotationValue("class=b", Annotations.findDeclared(C.class, Foo.class));
+    assertAnnotationValue("class=d", Annotations.findDeclared(D.class, Foo.class));
   }
 
   @Test
-  void testFindField() throws NoSuchFieldException {
-    assertNull(Annotations.find(B.class.getDeclaredField("y"), Foo.class));
-    assertAnnotationValue("class=b,field=z", Annotations.find(B.class.getDeclaredField("z"), Foo.class));
+  void testFindDeclaredClass_local() {
+    @Foo("class=x")
+    class X {}
+    class Y extends B {}
+    assertAnnotationValue("class=x", Annotations.findDeclared(X.class, Foo.class));
+    assertAnnotationValue("class=b", Annotations.findDeclared(Y.class, Foo.class));
   }
 
   @Test
-  void testFind_method_public() throws NoSuchMethodException {
-    assertAnnotationValue("class=b,method=a", Annotations.find(B.class.getDeclaredMethod("a"), Foo.class));
-    assertAnnotationValue("class=c,method=a", Annotations.find(C.class.getDeclaredMethod("a"), Foo.class));
-    assertAnnotationValue("class=c,method=a", Annotations.find(D.class.getDeclaredMethod("a"), Foo.class));
+  void testFindDeclaredField() throws NoSuchFieldException {
+    assertNull(Annotations.findDeclared(B.class.getDeclaredField("y"), Foo.class));
+    assertAnnotationValue("class=b,field=z", Annotations.findDeclared(B.class.getDeclaredField("z"), Foo.class));
   }
 
   @Test
-  void testFind_method_protected() throws NoSuchMethodException {
-    assertAnnotationValue("class=b,method=b", Annotations.find(B.class.getDeclaredMethod("b"), Foo.class));
-    assertAnnotationValue("class=b,method=b", Annotations.find(C.class.getDeclaredMethod("b"), Foo.class));
-    assertAnnotationValue("class=d,method=b", Annotations.find(D.class.getDeclaredMethod("b"), Foo.class));
+  void testFindDeclared_method_public() throws NoSuchMethodException {
+    assertAnnotationValue("class=b,method=a", Annotations.findDeclared(B.class.getDeclaredMethod("a"), Foo.class));
+    assertAnnotationValue("class=c,method=a", Annotations.findDeclared(C.class.getDeclaredMethod("a"), Foo.class));
+    assertAnnotationValue("class=c,method=a", Annotations.findDeclared(D.class.getDeclaredMethod("a"), Foo.class));
   }
 
   @Test
-  void testFind_method_package() throws NoSuchMethodException {
-    assertAnnotationValue("class=b,method=c", Annotations.find(B.class.getDeclaredMethod("c"), Foo.class));
-    assertAnnotationValue("class=b,method=c", Annotations.find(C.class.getDeclaredMethod("c"), Foo.class));
-    assertAnnotationValue("class=d,method=c", Annotations.find(D.class.getDeclaredMethod("c"), Foo.class));
+  void testFindDeclared_method_protected() throws NoSuchMethodException {
+    assertAnnotationValue("class=b,method=b", Annotations.findDeclared(B.class.getDeclaredMethod("b"), Foo.class));
+    assertAnnotationValue("class=b,method=b", Annotations.findDeclared(C.class.getDeclaredMethod("b"), Foo.class));
+    assertAnnotationValue("class=d,method=b", Annotations.findDeclared(D.class.getDeclaredMethod("b"), Foo.class));
   }
 
   @Test
-  void testFind_method_private() throws NoSuchMethodException {
-    assertAnnotationValue("class=b,method=d", Annotations.find(B.class.getDeclaredMethod("d"), Foo.class));
-    assertNull(Annotations.find(C.class.getDeclaredMethod("d"), Foo.class));
-    assertAnnotationValue("class=d,method=d", Annotations.find(D.class.getDeclaredMethod("d"), Foo.class));
+  void testFindDeclared_method_package() throws NoSuchMethodException {
+    assertAnnotationValue("class=b,method=c", Annotations.findDeclared(B.class.getDeclaredMethod("c"), Foo.class));
+    assertAnnotationValue("class=b,method=c", Annotations.findDeclared(C.class.getDeclaredMethod("c"), Foo.class));
+    assertAnnotationValue("class=d,method=c", Annotations.findDeclared(D.class.getDeclaredMethod("c"), Foo.class));
+  }
+
+  @Test
+  void testFindDeclared_method_private() throws NoSuchMethodException {
+    assertAnnotationValue("class=b,method=d", Annotations.findDeclared(B.class.getDeclaredMethod("d"), Foo.class));
+    assertNull(Annotations.findDeclared(C.class.getDeclaredMethod("d"), Foo.class));
+    assertAnnotationValue("class=d,method=d", Annotations.findDeclared(D.class.getDeclaredMethod("d"), Foo.class));
   }
 
   private static void assertAnnotationValue(final String string, final @Nullable Foo annotation) {

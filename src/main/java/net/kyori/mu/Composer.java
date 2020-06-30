@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /**
  * A collection of utilities for composing objects.
  */
-public interface Composer {
+public final class Composer {
+  private Composer() {
+  }
+
   /**
    * Gets a {@code T} from {@code supplier}.
    *
@@ -39,7 +42,7 @@ public interface Composer {
    * @param <T> the value type
    * @return the value
    */
-  static <T> /* @Nullable */ T get(final @NonNull Supplier<T> supplier) {
+  public static <T> /* @Nullable */ T get(final @NonNull Supplier<T> supplier) {
     return supplier.get();
   }
 
@@ -51,7 +54,7 @@ public interface Composer {
    * @param <T> the value type
    * @return the value
    */
-  static <T> /* @Nullable */ T accept(final @NonNull T value, final @NonNull Consumer<T> consumer) {
+  public static <T> /* @Nullable */ T accept(final @NonNull T value, final @NonNull Consumer<T> consumer) {
     consumer.accept(value);
     return value;
   }
@@ -65,7 +68,7 @@ public interface Composer {
    * @param <O> the output type
    * @return the value
    */
-  static <I, O> /* @Nullable */ O apply(final @NonNull I value, final @NonNull Function<I, O> function) {
+  public static <I, O> /* @Nullable */ O apply(final @NonNull I value, final @NonNull Function<I, O> function) {
     return function.apply(value);
   }
 
@@ -79,7 +82,7 @@ public interface Composer {
    * @param <O> the output type
    * @return the value
    */
-  static <I, O> /* @Nullable */ O make(final @NonNull I value, final @NonNull Consumer<I> consumer, final @NonNull Function<I, O> function) {
+  public static <I, O> /* @Nullable */ O make(final @NonNull I value, final @NonNull Consumer<I> consumer, final @NonNull Function<I, O> function) {
     return function.apply(accept(value, consumer));
   }
 }

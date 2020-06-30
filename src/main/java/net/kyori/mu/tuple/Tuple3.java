@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,10 +38,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <B> the b type
  * @param <C> the c type
  */
-public class Tuple3<A, B, C> implements Examinable {
-  private final A a;
-  private final B b;
-  private final C c;
+public class Tuple3<A, B, C> extends Tuple2<A, B> implements Examinable {
+  protected final C c;
 
   /**
    * Creates a new tuple3.
@@ -98,27 +96,8 @@ public class Tuple3<A, B, C> implements Examinable {
   }
 
   public Tuple3(final @Nullable A a, final @Nullable B b, final @Nullable C c) {
-    this.a = a;
-    this.b = b;
+    super(a, b);
     this.c = c;
-  }
-
-  /**
-   * Gets the a value.
-   *
-   * @return the a value
-   */
-  public /* @Nullable */ A a() {
-    return this.a;
-  }
-
-  /**
-   * Gets the b value.
-   *
-   * @return the b value
-   */
-  public /* @Nullable */ B b() {
-    return this.b;
   }
 
   /**
@@ -128,6 +107,11 @@ public class Tuple3<A, B, C> implements Examinable {
    */
   public /* @Nullable */ C c() {
     return this.c;
+  }
+
+  @Override
+  public @NonNull <NA, NB> Tuple3<NA, NB, C> map(final @NonNull Function<? super A, ? extends NA> a, final @NonNull Function<? super B, ? extends NB> b) {
+    return new Tuple3<>(a.apply(this.a), b.apply(this.b), this.c);
   }
 
   /**
@@ -152,6 +136,7 @@ public class Tuple3<A, B, C> implements Examinable {
    * @param <NA> the a type
    * @return a new tuple3
    */
+  @Override
   public <NA> @NonNull Tuple3<NA, B, C> mapA(final @NonNull Function<? super A, ? extends NA> function) {
     return new Tuple3<>(function.apply(this.a), this.b, this.c);
   }
@@ -163,6 +148,7 @@ public class Tuple3<A, B, C> implements Examinable {
    * @param <NB> the b type
    * @return a new tuple3
    */
+  @Override
   public <NB> @NonNull Tuple3<A, NB, C> mapB(final @NonNull Function<? super B, ? extends NB> function) {
     return new Tuple3<>(this.a, function.apply(this.b), this.c);
   }
@@ -180,10 +166,11 @@ public class Tuple3<A, B, C> implements Examinable {
 
   @Override
   public @NonNull Stream<? extends ExaminableProperty> examinableProperties() {
-    return Stream.of(
-      ExaminableProperty.of("a", this.a),
-      ExaminableProperty.of("b", this.b),
-      ExaminableProperty.of("c", this.c)
+    return Stream.concat(
+      super.examinableProperties(),
+      Stream.of(
+        ExaminableProperty.of("c", this.c)
+      )
     );
   }
 
@@ -194,18 +181,17 @@ public class Tuple3<A, B, C> implements Examinable {
 
   @Override
   public boolean equals(final Object other) {
-    if(this == other) {
-      return true;
-    }
-    if(other == null || this.getClass() != other.getClass()) {
-      return false;
-    }
+    if(this == other) return true;
+    if(other == null || this.getClass() != other.getClass()) return false;
+    if(!super.equals(other)) return false;
     final Tuple3<?, ?, ?> that = (Tuple3<?, ?, ?>) other;
-    return Objects.equals(this.a, that.a) && Objects.equals(this.b, that.b) && Objects.equals(this.c, that.c);
+    return Objects.equals(this.c, that.c);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.a, this.b, this.c);
+    int result = super.hashCode();
+    result = (31 * result) + Objects.hashCode(this.c);
+    return result;
   }
 }

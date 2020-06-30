@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,10 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 /**
  * A collection of methods for working with completable futures.
  */
-public interface CompletableFutures {
+public final class CompletableFutures {
+  private CompletableFutures() {
+  }
+
   /**
    * Returns a completable future that is exceptionally completed with the provided exception.
    *
@@ -37,7 +40,7 @@ public interface CompletableFutures {
    * @param <T> the type
    * @return an exceptionally completed completable future
    */
-  static <T> @NonNull CompletableFuture<T> completedExceptionally(final @NonNull Throwable throwable) {
+  public static <T> @NonNull CompletableFuture<T> completedExceptionally(final @NonNull Throwable throwable) {
     final CompletableFuture<T> future = new CompletableFuture<>();
     future.completeExceptionally(throwable);
     return future;

@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FieldsTest {
   @Test
-  void testGet() {
-    assertEquals("ABC", Fields.get(TestEnum.ABC).getName());
+  void testField() {
+    assertEquals("ABC", Fields.field(TestEnum.ABC).getName());
   }
 
   private enum TestEnum {

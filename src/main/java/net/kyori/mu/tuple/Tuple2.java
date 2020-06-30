@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,8 +39,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <B> the b type
  */
 public class Tuple2<A, B> implements Examinable {
-  private final A a;
-  private final B b;
+  protected final A a;
+  protected final B b;
 
   /**
    * Creates a new tuple2.
@@ -164,12 +164,8 @@ public class Tuple2<A, B> implements Examinable {
 
   @Override
   public boolean equals(final Object other) {
-    if(this == other) {
-      return true;
-    }
-    if(other == null || this.getClass() != other.getClass()) {
-      return false;
-    }
+    if(this == other) return true;
+    if(other == null || this.getClass() != other.getClass()) return false;
     final Tuple2<?, ?> that = (Tuple2<?, ?>) other;
     return Objects.equals(this.a, that.a) && Objects.equals(this.b, that.b);
   }

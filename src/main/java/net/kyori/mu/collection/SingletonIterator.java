@@ -1,7 +1,7 @@
 /*
  * This file is part of mu, licensed under the MIT License.
  *
- * Copyright (c) 2018-2019 KyoriPowered
+ * Copyright (c) 2018-2020 KyoriPowered
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,25 +27,25 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-final class SingletonIterator<T> implements Iterator<T> {
+/* package */ final class SingletonIterator<T> implements Iterator<T> {
   private final @Nullable T value;
-  private boolean done;
+  private boolean hasNext = true;
 
-  SingletonIterator(@Nullable final T value) {
+  /* package */ SingletonIterator(@Nullable final T value) {
     this.value = value;
   }
 
   @Override
   public boolean hasNext() {
-    return !this.done;
+    return this.hasNext;
   }
 
   @Override
   public T next() {
-    if(this.done) {
+    if(!this.hasNext) {
       throw new NoSuchElementException();
     }
-    this.done = true;
+    this.hasNext = false;
     return this.value;
   }
 }
