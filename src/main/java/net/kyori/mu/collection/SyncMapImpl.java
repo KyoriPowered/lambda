@@ -74,6 +74,7 @@ import static java.util.Objects.requireNonNull;
   }
 
   @Nullable
+  @SuppressWarnings("SuspiciousMethodCalls")
   private ExpungingValue<V> getValue(final @Nullable Object key) {
     ExpungingValue<V> entry = this.read.get(key);
     if(entry == null && this.readAmended) {
@@ -118,12 +119,11 @@ import static java.util.Objects.requireNonNull;
       if(!ifPresent) {
         entry = this.read.get(key);
         if(entry != null && entry.tryUnexpungeAndSet(value)) {
-          // If we had an expunged entry, then this.dirty != null and we need to insert the entry there too.
           this.dirty.put(key, entry);
           return null;
         }
       }
-      if(this.dirty != null && (entry = this.dirty.get(key)) != null) {
+      if(this.dirty != null && this.readAmended && (entry = this.dirty.get(key)) != null) {
         previous = entry.set(value);
       } else if(!ifPresent) {
         if(!this.readAmended) {
@@ -140,6 +140,7 @@ import static java.util.Objects.requireNonNull;
   }
 
   @Override
+  @SuppressWarnings("SuspiciousMethodCalls")
   public V remove(final @Nullable Object key) {
     ExpungingValue<V> entry = this.read.get(key);
     if(entry == null && this.readAmended) {
@@ -153,6 +154,7 @@ import static java.util.Objects.requireNonNull;
   }
 
   @Override
+  @SuppressWarnings("SuspiciousMethodCalls")
   public boolean remove(final @Nullable Object key, final @NonNull Object value) {
     requireNonNull(value, "value");
     ExpungingValue<V> entry = this.read.get(key);
@@ -288,7 +290,7 @@ import static java.util.Objects.requireNonNull;
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "rawtypes"})
   private static class ExpungingValueImpl<V> implements SyncMap.ExpungingValue<V> {
     private static final Object EXPUNGED = new Object();
     private static final AtomicReferenceFieldUpdater<ExpungingValueImpl, Object> valueUpdater =
@@ -324,7 +326,7 @@ import static java.util.Objects.requireNonNull;
     }
 
     @Override
-    public boolean isExpunged() {
+    public boolean expunged() {
       return valueUpdater.get(this) == EXPUNGED;
     }
 
@@ -334,10 +336,38 @@ import static java.util.Objects.requireNonNull;
       return value != null && value != EXPUNGED;
     }
 
+    @Nullable
     @Override
     public V set(final @NonNull V value) {
       final Object previous = valueUpdater.getAndSet(this, value);
       return previous == EXPUNGED ? null : (V) previous;
+    }
+
+    @Override
+    public boolean replace(final @NonNull Object expected, final @Nullable V newValue) {
+      for(;;) {
+        final Object value = valueUpdater.get(this);
+        if(value == EXPUNGED || !Objects.equals(value, expected)) {
+          return false;
+        }
+        if(valueUpdater.compareAndSet(this, value, newValue)) {
+          return true;
+        }
+      }
+    }
+
+    @Nullable
+    @Override
+    public V clear() {
+      for(;;) {
+        final Object value = valueUpdater.get(this);
+        if(value == null || value == EXPUNGED) {
+          return null;
+        }
+        if(valueUpdater.compareAndSet(this, value, null)) {
+          return (V) value;
+        }
+      }
     }
 
     @Override
@@ -366,35 +396,8 @@ import static java.util.Objects.requireNonNull;
     }
 
     @Override
-    public boolean tryUnexpungeAndSet(V element) {
+    public boolean tryUnexpungeAndSet(final @Nullable V element) {
       return valueUpdater.compareAndSet(this, EXPUNGED, element);
-    }
-
-    @Override
-    public boolean replace(final @NonNull Object expected, final @Nullable V newValue) {
-      for(;;) {
-        final Object value = valueUpdater.get(this);
-        if(value == EXPUNGED || !Objects.equals(value, expected)) {
-          return false;
-        }
-        if(valueUpdater.compareAndSet(this, value, newValue)) {
-          return true;
-        }
-      }
-    }
-
-    @Nullable
-    @Override
-    public V clear() {
-      for(;;) {
-        final Object value = valueUpdater.get(this);
-        if(value == null || value == EXPUNGED) {
-          return null;
-        }
-        if(valueUpdater.compareAndSet(this, value, null)) {
-          return (V) value;
-        }
-      }
     }
   }
 

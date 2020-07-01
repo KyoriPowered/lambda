@@ -144,6 +144,7 @@ public interface SyncMap<K, V> extends ConcurrentMap<K, V> {
    * <p>Performance note: if entries have been appended to the map, iterating over the entry set will automatically
    * promote them to the read map.</p>
    */
+  @NonNull
   @Override
   Set<Entry<K, V>> entrySet();
 
@@ -189,14 +190,14 @@ public interface SyncMap<K, V> extends ConcurrentMap<K, V> {
      * @return a {@link Map.Entry} with false key and null value if the value was expunged, a true key and the
      * previous value in the map otherwise
      */
-    Map.Entry<Boolean, V> putIfAbsent(@NonNull V value);
+    Map.Entry<Boolean, V> putIfAbsent(final @NonNull V value);
 
     /**
      * Returns {@code true} if this element has been expunged.
      *
      * @return whether or not this element has been expunged
      */
-    boolean isExpunged();
+    boolean expunged();
 
     /**
      * Returns {@code true} if this element has a value (it is neither expunged nor {@code null}.
@@ -227,6 +228,8 @@ public interface SyncMap<K, V> extends ConcurrentMap<K, V> {
     /**
      * Clears the entry stored in this value. Has no effect if {@code null} is stored in the map or
      * the entry was expunged.
+     *
+     * @return the previous element stored, or {@code null} if the entry had been expunged
      */
     @Nullable
     V clear();
