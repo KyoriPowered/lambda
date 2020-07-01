@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +43,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterator;
+import net.kyori.test.Testing;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 class SyncMapTest {
@@ -492,6 +495,70 @@ class SyncMapTest {
     entrySpliterator.forEachRemaining(remaining::add);
     assertEquals(Lists.newArrayList(secondEntry, thirdEntry), remaining);
     assertEquals(3, entrySpliterator.estimateSize());
+  }
+
+  @Test
+  public void testConcurrentEntryMutation_iterator() {
+    final SyncMap<String, String> map = SyncMap.of(LinkedHashMap<String, SyncMap.ExpungingValue<String>>::new, 3);
+    map.put("1", "2");
+    map.put("3", "4");
+    map.put("5", "6");
+    final Map.Entry<String, String> firstEntry = this.exampleEntry("1", "2");
+    final Map.Entry<String, String> secondEntry = this.exampleEntry("3", "4");
+    final Map.Entry<String, String> thirdEntry = this.exampleEntry("5", "6");
+    final Map.Entry<String, String> fourthEntry = this.exampleEntry("7", "8");
+    final Map.Entry<String, String> fifthEntry = this.exampleEntry("9", "10");
+    final Set<Map.Entry<String, String>> entries = map.entrySet();
+    final Iterator<Map.Entry<String, String>> entryIterator = entries.iterator();
+    assertTrue(entryIterator.hasNext());
+    map.put("7", "8");
+    map.put("9", "10");
+    assertEquals(entryIterator.next(), firstEntry);
+    entryIterator.remove();
+    assertFalse(entries.contains(firstEntry));
+    assertTrue(entries.contains(fourthEntry));
+    assertTrue(entries.contains(fifthEntry));
+    final List<Map.Entry<String, String>> remaining = new ArrayList<>();
+    entryIterator.forEachRemaining(remaining::add);
+    assertEquals(Lists.newArrayList(secondEntry, thirdEntry), remaining);
+    assertEquals(4, map.size());
+  }
+
+  @RepeatedTest(5)
+  public void testConcurrency() throws InterruptedException {
+//    final SyncMap<Integer, Boolean> map = SyncMap.hashmap();
+    final Map<Integer, Boolean> map = new HashMap<>();
+    final Runnable putTest = () -> { for (int i = 0; i < 1000; i++) map.put(i, Boolean.TRUE); };
+    final Runnable removeTest = () -> { for (int i = 0; i < 1000; i++) map.remove(i); };
+    final Runnable putAbsentTest = () -> { for (int i = 0; i < 1000; i++) map.putIfAbsent(i, Boolean.TRUE); };
+    final Runnable getTest = () -> { for (int i = 0; i < 1000; i++) map.get(i); };
+    Testing.assertConcurrent("put tasks", Lists.newArrayList(
+      putTest,
+      putTest,
+      putTest
+    ), 5);
+    Testing.assertConcurrent("remove tasks", Lists.newArrayList(
+      removeTest,
+      removeTest,
+      removeTest
+    ), 5);
+    Testing.assertConcurrent("putIfAbsent tasks", Lists.newArrayList(
+      putAbsentTest,
+      putAbsentTest,
+      putAbsentTest
+    ), 5);
+    Testing.assertConcurrent("get tasks", Lists.newArrayList(
+      getTest,
+      getTest,
+      getTest
+    ), 5);
+    assertEquals(Boolean.TRUE, map.get(1));
+    assertEquals(Boolean.TRUE, map.get(500));
+    assertEquals(Boolean.TRUE, map.get(999));
+    assertEquals(1000, map.size());
+    assertFalse(map.isEmpty());
+    assertTrue(map.containsKey(500));
+    assertTrue(map.containsValue(Boolean.TRUE));
   }
 
   private Map.Entry<String, String> exampleEntry(final String key, final String value) {
