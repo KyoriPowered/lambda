@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterator;
+import java.util.stream.IntStream;
 import net.kyori.test.Testing;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
@@ -526,39 +527,28 @@ class SyncMapTest {
 
   @RepeatedTest(5)
   public void testConcurrency() throws InterruptedException {
-//    final SyncMap<Integer, Boolean> map = SyncMap.hashmap();
-    final Map<Integer, Boolean> map = new HashMap<>();
-    final Runnable putTest = () -> { for (int i = 0; i < 1000; i++) map.put(i, Boolean.TRUE); };
-    final Runnable removeTest = () -> { for (int i = 0; i < 1000; i++) map.remove(i); };
-    final Runnable putAbsentTest = () -> { for (int i = 0; i < 1000; i++) map.putIfAbsent(i, Boolean.TRUE); };
-    final Runnable getTest = () -> { for (int i = 0; i < 1000; i++) map.get(i); };
+    final SyncMap<Integer, Boolean> map = SyncMap.hashmap();
     Testing.assertConcurrent("put tasks", Lists.newArrayList(
-      putTest,
-      putTest,
-      putTest
+      () -> IntStream.range(0, 500).forEach(number -> map.put(number, Boolean.TRUE)),
+      () -> IntStream.range(250, 750).forEach(number -> map.put(number, Boolean.TRUE)),
+      () -> IntStream.range(500, 1000).forEach(number -> map.put(number, Boolean.TRUE))
     ), 5);
     Testing.assertConcurrent("remove tasks", Lists.newArrayList(
-      removeTest,
-      removeTest,
-      removeTest
+      () -> IntStream.range(0, 500).forEach(number -> map.remove(number, Boolean.TRUE)),
+      () -> IntStream.range(250, 750).forEach(number -> map.remove(number, Boolean.TRUE)),
+      () -> IntStream.range(500, 1000).forEach(number -> map.remove(number, Boolean.TRUE))
     ), 5);
     Testing.assertConcurrent("putIfAbsent tasks", Lists.newArrayList(
-      putAbsentTest,
-      putAbsentTest,
-      putAbsentTest
+      () -> IntStream.range(0, 500).forEach(number -> map.putIfAbsent(number, Boolean.TRUE)),
+      () -> IntStream.range(250, 750).forEach(number -> map.putIfAbsent(number, Boolean.TRUE)),
+      () -> IntStream.range(500, 1000).forEach(number -> map.putIfAbsent(number, Boolean.TRUE))
     ), 5);
     Testing.assertConcurrent("get tasks", Lists.newArrayList(
-      getTest,
-      getTest,
-      getTest
+      () -> IntStream.range(0, 500).forEach(number -> map.get(number)),
+      () -> IntStream.range(250, 750).forEach(number -> map.get(number)),
+      () -> IntStream.range(500, 1000).forEach(number -> map.get(number))
     ), 5);
-    assertEquals(Boolean.TRUE, map.get(1));
-    assertEquals(Boolean.TRUE, map.get(500));
-    assertEquals(Boolean.TRUE, map.get(999));
     assertEquals(1000, map.size());
-    assertFalse(map.isEmpty());
-    assertTrue(map.containsKey(500));
-    assertTrue(map.containsValue(Boolean.TRUE));
   }
 
   private Map.Entry<String, String> exampleEntry(final String key, final String value) {

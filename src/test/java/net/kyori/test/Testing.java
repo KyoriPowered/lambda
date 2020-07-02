@@ -61,30 +61,30 @@ public final class Testing {
   }
 
   // From https://github.com/junit-team/junit4/wiki/Multithreaded-code-and-concurrency
-  public static void assertConcurrent(final String message, final List<? extends Runnable> runnables, final int maxTimeoutSeconds) throws InterruptedException {
-    final int numThreads = runnables.size();
-    final List<Throwable> exceptions = Collections.synchronizedList(new ArrayList<Throwable>());
+  public static void assertConcurrent(final String message, final List<? extends Runnable> tasks, final int maximumTimeout) throws InterruptedException {
+    final int numThreads = tasks.size();
+    final List<Throwable> exceptions = Collections.synchronizedList(new ArrayList<>());
     final ExecutorService threadPool = Executors.newFixedThreadPool(numThreads);
     try {
       final CountDownLatch allExecutorThreadsReady = new CountDownLatch(numThreads);
       final CountDownLatch afterInitBlocker = new CountDownLatch(1);
       final CountDownLatch allDone = new CountDownLatch(numThreads);
-      for (final Runnable submittedTestRunnable : runnables) {
+      for(final Runnable submittedTestRunnable : tasks) {
         threadPool.submit(() -> {
           allExecutorThreadsReady.countDown();
           try {
             afterInitBlocker.await();
             submittedTestRunnable.run();
-          } catch (final Throwable e) {
+          } catch(final Throwable e) {
             exceptions.add(e);
           } finally {
             allDone.countDown();
           }
         });
       }
-      assertTrue(allExecutorThreadsReady.await(runnables.size() * 10, TimeUnit.MILLISECONDS), "Timeout initializing threads! Perform long lasting initializations before passing runnables to assertConcurrent");
+      assertTrue(allExecutorThreadsReady.await(tasks.size() * 10, TimeUnit.MILLISECONDS), "Timeout initializing threads! Perform long lasting initializations before passing runnables to assertConcurrent");
       afterInitBlocker.countDown();
-      assertTrue(allDone.await(maxTimeoutSeconds, TimeUnit.SECONDS), message +" timeout! More than" + maxTimeoutSeconds + "seconds");
+      assertTrue(allDone.await(maximumTimeout, TimeUnit.SECONDS), message + " timeout! More than" + maximumTimeout + "seconds");
     } finally {
       threadPool.shutdownNow();
     }
