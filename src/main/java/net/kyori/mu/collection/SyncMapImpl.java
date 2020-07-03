@@ -198,7 +198,7 @@ import static java.util.Objects.requireNonNull;
           this.dirtyLocked();
           this.readAmended = true;
         }
-        if (this.dirty != null) {
+        if(this.dirty != null) {
           this.dirty.put(key, new ExpungingValueImpl<>(value));
         }
       }
@@ -311,7 +311,7 @@ import static java.util.Objects.requireNonNull;
 
     @Override
     public Entry<Boolean, V> putIfAbsent(final @NonNull V value) {
-      for(;;) {
+      for(; ; ) {
         final Object previous = valueUpdater.get(this);
         if(previous == EXPUNGED) {
           return new AbstractMap.SimpleImmutableEntry<>(Boolean.FALSE, null);
@@ -345,7 +345,7 @@ import static java.util.Objects.requireNonNull;
 
     @Override
     public boolean replace(final @NonNull Object expected, final @Nullable V newValue) {
-      for(;;) {
+      for(; ; ) {
         final Object value = valueUpdater.get(this);
         if(value == EXPUNGED || !Objects.equals(value, expected)) {
           return false;
@@ -359,7 +359,7 @@ import static java.util.Objects.requireNonNull;
     @Nullable
     @Override
     public V clear() {
-      for(;;) {
+      for(; ; ) {
         final Object value = valueUpdater.get(this);
         if(value == null || value == EXPUNGED) {
           return null;
@@ -372,7 +372,7 @@ import static java.util.Objects.requireNonNull;
 
     @Override
     public boolean trySet(final @NonNull V newValue) {
-      for(;;) {
+      for(; ; ) {
         final Object present = valueUpdater.get(this);
         if(present == EXPUNGED) {
           return false;

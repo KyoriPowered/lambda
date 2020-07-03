@@ -35,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -91,7 +90,7 @@ class SyncMapTest {
   public void testMutation_repeatedPut() {
     final SyncMap<String, String> map = SyncMap.hashmap();
     assertNull(map.put("foo", "bar"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("bar", map.get("foo"));
     }
     assertEquals("bar", map.put("foo", "baz"));
@@ -102,7 +101,7 @@ class SyncMapTest {
   public void testMutation_handlesDirtyAndReadPut() {
     final SyncMap<String, String> map = SyncMap.hashmap();
     assertNull(map.put("foo", "bar"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("bar", map.get("foo"));
     }
     assertNull(map.put("abc", "123"));
@@ -114,14 +113,14 @@ class SyncMapTest {
   public void testMutation_ensuresExpungedEntriesProperlyHandled() {
     final SyncMap<String, String> map = SyncMap.hashmap();
     assertNull(map.put("foo", "bar"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("bar", map.get("foo"));
     }
     assertEquals("bar", map.remove("foo"));
     assertEquals(0, map.size());
     assertNull(map.put("abc", "123"));
     assertNull(map.get("foo"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("123", map.get("abc"));
     }
     assertNull(map.get("foo"));
@@ -131,7 +130,7 @@ class SyncMapTest {
   public void testMutation_putExpungedProperlyHandled() {
     final SyncMap<String, String> map = SyncMap.hashmap();
     assertNull(map.put("foo", "bar"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("bar", map.get("foo"));
     }
     assertEquals("bar", map.remove("foo"));
@@ -139,7 +138,7 @@ class SyncMapTest {
     assertNull(map.put("abc", "123"));
     assertNull(map.put("foo", "baz"));
     assertEquals("baz", map.get("foo"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("123", map.get("abc"));
     }
     assertEquals("123", map.get("abc"));
@@ -166,7 +165,7 @@ class SyncMapTest {
   public void testMutation_putIfAbsentPromoted() {
     final SyncMap<String, String> map = SyncMap.hashmap();
     assertNull(map.putIfAbsent("foo", "bar"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("bar", map.get("foo"));
     }
     assertEquals("bar", map.putIfAbsent("foo", "baz"));
@@ -193,7 +192,7 @@ class SyncMapTest {
   public void testMutation_replaceSingleHandlesPromotion() {
     final SyncMap<String, String> map = SyncMap.hashmap();
     assertNull(map.put("foo", "bar"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("bar", map.get("foo"));
     }
     assertEquals("bar", map.replace("foo", "baz"));
@@ -226,7 +225,7 @@ class SyncMapTest {
   public void testMutation_replaceSpecificPromoted() {
     final SyncMap<String, String> map = SyncMap.hashmap();
     assertNull(map.put("foo", "bar"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("bar", map.get("foo"));
     }
     assertFalse(map.replace("foo", "baz", "bar"));
@@ -239,7 +238,7 @@ class SyncMapTest {
   public void testMutation_putIfAbsentHandleExpunged() {
     final SyncMap<String, String> map = SyncMap.hashmap();
     assertNull(map.putIfAbsent("foo", "bar"));
-    for (int i = 0; i < 10; i++) {
+    for(int i = 0; i < 10; i++) {
       assertEquals("bar", map.get("foo"));
     }
     assertEquals("bar", map.remove("foo"));

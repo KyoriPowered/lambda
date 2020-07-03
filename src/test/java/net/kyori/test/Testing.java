@@ -37,8 +37,6 @@ import java.util.function.IntPredicate;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public final class Testing {
   @SuppressWarnings("SpellCheckingInspection") // "d" at end is intentional
   public static void assetAllMatchd(final DoublePredicate predicate, final double... values) {
