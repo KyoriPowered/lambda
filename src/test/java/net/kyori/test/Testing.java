@@ -23,8 +23,6 @@
  */
 package net.kyori.test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +34,8 @@ import java.util.function.DoublePredicate;
 import java.util.function.IntPredicate;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class Testing {
   @SuppressWarnings("SpellCheckingInspection") // "d" at end is intentional
