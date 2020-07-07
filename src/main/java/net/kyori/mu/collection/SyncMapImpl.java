@@ -123,7 +123,7 @@ import static java.util.Objects.requireNonNull;
           return null;
         }
       }
-      if(this.dirty != null && this.readAmended && (entry = this.dirty.get(key)) != null) {
+      if(this.readAmended && this.dirty != null && (entry = this.dirty.get(key)) != null) {
         previous = entry.set(value);
       } else if(!ifPresent) {
         if(!this.readAmended) {
@@ -189,7 +189,7 @@ import static java.util.Objects.requireNonNull;
       if(entry != null && entry.tryUnexpungeAndSet(value)) {
         this.dirty.put(key, entry);
         return null;
-      } else if(this.dirty != null && (entry = this.dirty.get(key)) != null) {
+      } else if(this.readAmended && this.dirty != null && (entry = this.dirty.get(key)) != null) {
         final Map.Entry<Boolean, V> result = entry.putIfAbsent(value);
         this.missLocked();
         return result.getValue();
