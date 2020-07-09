@@ -42,6 +42,7 @@ import static java.util.Objects.requireNonNull;
 /* package */ final class SyncMapImpl<K, V> extends AbstractMap<K, V> implements SyncMap<K, V> {
   private final Object lock = new Object();
   private final Function<Integer, Map<K, ExpungingValue<V>>> function;
+  private final int initialCapacity;
   private volatile Map<K, ExpungingValue<V>> read;
   private volatile boolean readAmended;
   private int readMisses;
@@ -51,6 +52,7 @@ import static java.util.Objects.requireNonNull;
   /* package */ SyncMapImpl(final Function<Integer, Map<K, ExpungingValue<V>>> function, final int initialCapacity) {
     this.function = function;
     this.read = function.apply(initialCapacity);
+    this.initialCapacity = initialCapacity;
   }
 
   @Override
@@ -242,7 +244,7 @@ import static java.util.Objects.requireNonNull;
   @Override
   public void clear() {
     synchronized(this.lock) {
-      this.read.clear();
+      this.read = this.function.apply(this.initialCapacity);
       this.dirty = null;
       this.readMisses = 0;
       this.readAmended = false;
